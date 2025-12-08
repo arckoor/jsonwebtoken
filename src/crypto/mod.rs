@@ -132,20 +132,12 @@ See the documentation of the CryptoProvider type for more information.
 
     /// Determine a `CryptoProvider` based on crate features.
     pub fn from_crate_features() -> Option<Self> {
-        #[cfg(all(
-            feature = "rust_crypto",
-            not(feature = "aws_lc_rs"),
-            not(feature = "custom-provider")
-        ))]
+        #[cfg(all(feature = "rust_crypto", not(feature = "aws_lc_rs")))]
         {
             return Some(rust_crypto::DEFAULT_PROVIDER);
         }
 
-        #[cfg(all(
-            feature = "aws_lc_rs",
-            not(feature = "rust_crypto"),
-            not(feature = "custom-provider")
-        ))]
+        #[cfg(all(feature = "aws_lc_rs", not(feature = "rust_crypto")))]
         {
             return Some(aws_lc::DEFAULT_PROVIDER);
         }

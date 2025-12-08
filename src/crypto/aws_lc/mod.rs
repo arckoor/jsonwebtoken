@@ -15,8 +15,7 @@ mod eddsa;
 mod hmac;
 mod rsa;
 
-/// Given a DER encoded private key, extract the RSA public key components (n, e)
-pub fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
+fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(Vec<u8>, Vec<u8>)> {
     let key_pair = aws_sig::RsaKeyPair::from_der(key_content)
         .map_err(|e| ErrorKind::InvalidRsaKey(e.to_string()))?;
     let public = key_pair.public_key();
@@ -24,9 +23,7 @@ pub fn extract_rsa_public_key_components(key_content: &[u8]) -> errors::Result<(
     Ok((components.n, components.e))
 }
 
-/// Given a DER encoded private key and an algorithm, extract the associated curve
-/// and the EC public key components (x, y)
-pub fn extract_ec_public_key_coordinates(
+fn extract_ec_public_key_coordinates(
     key_content: &[u8],
     alg: Algorithm,
 ) -> errors::Result<(EllipticCurve, Vec<u8>, Vec<u8>)> {
@@ -52,8 +49,7 @@ pub fn extract_ec_public_key_coordinates(
     Ok((curve, x.to_vec(), y.to_vec()))
 }
 
-/// Given some data and a name of a hash function, compute hash_function(data)
-pub fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
+fn compute_digest(data: &[u8], hash_function: ThumbprintHash) -> Vec<u8> {
     let algorithm = match hash_function {
         ThumbprintHash::SHA256 => &digest::SHA256,
         ThumbprintHash::SHA384 => &digest::SHA384,

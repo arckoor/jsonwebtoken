@@ -454,18 +454,18 @@ impl Jwk {
                 }),
                 ..Default::default()
             },
-            algorithm: match key.family {
+            algorithm: match key.family() {
                 crate::algorithms::AlgorithmFamily::Hmac => {
                     AlgorithmParameters::OctetKey(OctetKeyParameters {
                         key_type: OctetKeyType::Octet,
-                        value: b64_encode(&key.content),
+                        value: b64_encode(key.inner()),
                     })
                 }
                 crate::algorithms::AlgorithmFamily::Rsa => {
                     let (n, e) = (CryptoProvider::get_default_or_install_from_crate_features()
                         .jwk_utils
                         .extract_rsa_public_key_components)(
-                        &key.content
+                        key.inner()
                     )?;
                     AlgorithmParameters::RSA(RSAKeyParameters {
                         key_type: RSAKeyType::RSA,
@@ -478,7 +478,7 @@ impl Jwk {
                         (CryptoProvider::get_default_or_install_from_crate_features()
                             .jwk_utils
                             .extract_ec_public_key_coordinates)(
-                            &key.content, alg
+                            key.inner(), alg
                         )?;
                     AlgorithmParameters::EllipticCurve(EllipticCurveKeyParameters {
                         key_type: EllipticCurveKeyType::EC,

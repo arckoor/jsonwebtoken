@@ -44,14 +44,6 @@ macro_rules! expect_two {
 }
 
 #[derive(Clone)]
-#[cfg(not(feature = "custom-provider"))]
-pub(crate) enum DecodingKeyKind {
-    SecretOrDer(Vec<u8>),
-    RsaModulusExponent { n: Vec<u8>, e: Vec<u8> },
-}
-
-#[derive(Clone)]
-#[cfg(feature = "custom-provider")]
 pub enum DecodingKeyKind {
     SecretOrDer(Vec<u8>),
     RsaModulusExponent { n: Vec<u8>, e: Vec<u8> },
@@ -74,22 +66,19 @@ impl Debug for DecodingKeyKind {
 /// This key can be re-used so make sure you only initialize it once if you can for better performance.
 #[derive(Clone, Debug)]
 pub struct DecodingKey {
-    #[cfg(not(feature = "custom-provider"))]
-    pub(crate) family: AlgorithmFamily,
-    #[cfg(feature = "custom-provider")]
-    #[cfg_attr(feature = "custom-provider", allow(missing_docs))]
-    pub family: AlgorithmFamily,
-    #[cfg(not(feature = "custom-provider"))]
-    pub(crate) kind: DecodingKeyKind,
-    #[cfg(feature = "custom-provider")]
-    #[cfg_attr(feature = "custom-provider", allow(missing_docs))]
-    pub kind: DecodingKeyKind,
+    family: AlgorithmFamily,
+    kind: DecodingKeyKind,
 }
 
 impl DecodingKey {
     /// The algorithm family this key is for.
     pub fn family(&self) -> AlgorithmFamily {
         self.family
+    }
+
+    /// The kind of decoding key
+    pub fn kind(&self) -> &DecodingKeyKind {
+        &self.kind
     }
 
     /// If you're using HMAC, use this.
@@ -229,36 +218,16 @@ impl DecodingKey {
         }
     }
 
-    #[cfg(not(feature = "custom-provider"))]
-    pub(crate) fn as_bytes(&self) -> &[u8] {
-        self.as_bytes_impl()
-    }
-
     /// Get the value of the key.
-    #[cfg(feature = "custom-provider")]
     pub fn as_bytes(&self) -> &[u8] {
-        self.as_bytes_impl()
-    }
-
-    fn as_bytes_impl(&self) -> &[u8] {
         match &self.kind {
             DecodingKeyKind::SecretOrDer(b) => b,
             DecodingKeyKind::RsaModulusExponent { .. } => unreachable!(),
         }
     }
 
-    #[cfg(not(feature = "custom-provider"))]
-    pub(crate) fn try_get_hmac_secret(&self) -> Result<&[u8]> {
-        self.try_get_hmac_secret_impl()
-    }
-
     /// Try to get the HMAC secret from a key.
-    #[cfg(feature = "custom-provider")]
     pub fn try_get_hmac_secret(&self) -> Result<&[u8]> {
-        self.try_get_hmac_secret_impl()
-    }
-
-    fn try_get_hmac_secret_impl(&self) -> Result<&[u8]> {
         if self.family == AlgorithmFamily::Hmac {
             Ok(self.as_bytes())
         } else {

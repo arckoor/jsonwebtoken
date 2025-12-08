@@ -1,15 +1,15 @@
 use jsonwebtoken::{
-    Algorithm, DecodingKey, EncodingKey, Header, Validation,
+    Algorithm, AlgorithmFamily, DecodingKey, EncodingKey, Error as SigError, Header, Signer,
+    Validation, Verifier,
     crypto::{CryptoProvider, JwkUtils, JwtSigner, JwtVerifier},
     decode, encode,
-    errors::Error,
+    errors::{Error, ErrorKind},
 };
 use serde::{Deserialize, Serialize};
-use signature::{Signer, Verifier};
 
 fn new_signer(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dyn JwtSigner>, Error> {
     let jwt_signer = match algorithm {
-        Algorithm::EdDSA => Box::new(CustomEdDSASigner::new(key)?) as Box<dyn JwtSigner>,
+        Algorithm::EdDSA => Box::new(EdDSASigner::new(key)?) as Box<dyn JwtSigner>,
         _ => unimplemented!(),
     };
 
@@ -18,49 +18,71 @@ fn new_signer(algorithm: &Algorithm, key: &EncodingKey) -> Result<Box<dyn JwtSig
 
 fn new_verifier(algorithm: &Algorithm, key: &DecodingKey) -> Result<Box<dyn JwtVerifier>, Error> {
     let jwt_verifier = match algorithm {
-        Algorithm::EdDSA => Box::new(CustomEdDSAVerifier::new(key)?) as Box<dyn JwtVerifier>,
+        Algorithm::EdDSA => Box::new(EdDSAVerifier::new(key)?) as Box<dyn JwtVerifier>,
         _ => unimplemented!(),
     };
 
     Ok(jwt_verifier)
 }
 
-pub struct CustomEdDSASigner;
+struct EdDSASigner(botan::Privkey);
 
-impl CustomEdDSASigner {
-    fn new(_: &EncodingKey) -> Result<Self, Error> {
-        Ok(CustomEdDSASigner)
+impl EdDSASigner {
+    fn new(encoding_key: &EncodingKey) -> Result<Self, Error> {
+        if encoding_key.family() != AlgorithmFamily::Ed {
+            return Err(ErrorKind::InvalidKeyFormat.into());
+        }
+
+        Ok(Self(
+            botan::Privkey::load_der(encoding_key.inner())
+                .map_err(|_| ErrorKind::InvalidEddsaKey)?,
+        ))
     }
 }
 
-// WARNING: This is obviously not secure at all and should NEVER be done in practice!
-impl Signer<Vec<u8>> for CustomEdDSASigner {
-    fn try_sign(&self, _: &[u8]) -> Result<Vec<u8>, signature::Error> {
-        Ok(vec![0; 16])
+impl Signer<Vec<u8>> for EdDSASigner {
+    fn try_sign(&self, msg: &[u8]) -> std::result::Result<Vec<u8>, SigError> {
+        let mut rng = botan::RandomNumberGenerator::new_system().map_err(SigError::from_source)?;
+        let mut signer = botan::Signer::new(&self.0, "Pure").map_err(SigError::from_source)?;
+        signer.update(msg).map_err(SigError::from_source)?;
+        signer.finish(&mut rng).map_err(SigError::from_source)
     }
 }
 
-impl JwtSigner for CustomEdDSASigner {
+impl JwtSigner for EdDSASigner {
     fn algorithm(&self) -> Algorithm {
         Algorithm::EdDSA
     }
 }
 
-pub struct CustomEdDSAVerifier;
+struct EdDSAVerifier(botan::Pubkey);
 
-impl CustomEdDSAVerifier {
-    fn new(_: &DecodingKey) -> Result<Self, Error> {
-        Ok(CustomEdDSAVerifier)
+impl EdDSAVerifier {
+    fn new(decoding_key: &DecodingKey) -> Result<Self, Error> {
+        if decoding_key.family() != AlgorithmFamily::Ed {
+            return Err(ErrorKind::InvalidKeyFormat.into());
+        }
+
+        Ok(Self(
+            botan::Pubkey::load_ed25519(decoding_key.as_bytes())
+                .map_err(|_| ErrorKind::InvalidEddsaKey)?,
+        ))
     }
 }
 
-impl Verifier<Vec<u8>> for CustomEdDSAVerifier {
-    fn verify(&self, _: &[u8], signature: &Vec<u8>) -> Result<(), signature::Error> {
-        if signature == &vec![0; 16] { Ok(()) } else { Err(signature::Error::new()) }
+impl Verifier<Vec<u8>> for EdDSAVerifier {
+    fn verify(&self, msg: &[u8], signature: &Vec<u8>) -> std::result::Result<(), SigError> {
+        let mut verifier = botan::Verifier::new(&self.0, "Pure").map_err(SigError::from_source)?;
+        verifier.update(msg).map_err(SigError::from_source)?;
+        verifier
+            .finish(signature)
+            .map_err(SigError::from_source)?
+            .then_some(())
+            .ok_or(SigError::new())
     }
 }
 
-impl JwtVerifier for CustomEdDSAVerifier {
+impl JwtVerifier for EdDSAVerifier {
     fn algorithm(&self) -> Algorithm {
         Algorithm::EdDSA
     }
@@ -82,21 +104,30 @@ fn main() {
     };
     my_crypto_provider.install_default().unwrap();
 
-    // for an actual EdDSA implementation, this would be some private key
-    let key = b"secret";
+    // generate a new key
+    let (privkey, pubkey) = {
+        let key = botan::Privkey::create(
+            "Ed25519",
+            "",
+            &mut botan::RandomNumberGenerator::new_system().unwrap(),
+        )
+        .unwrap();
+        (key.pem_encode().unwrap(), key.pubkey().unwrap().pem_encode().unwrap())
+    };
     let my_claims = Claims { sub: "me".to_owned(), exp: 10000000000 };
 
     // our crypto provider only supports EdDSA
     let header = Header::new(Algorithm::EdDSA);
 
-    let token = match encode(&header, &my_claims, &EncodingKey::from_ed_der(key)) {
-        Ok(t) => t,
-        Err(_) => panic!(), // in practice you would return an error
-    };
+    let token =
+        match encode(&header, &my_claims, &EncodingKey::from_ed_pem(privkey.as_bytes()).unwrap()) {
+            Ok(t) => t,
+            Err(_) => panic!(), // in practice you would return an error
+        };
 
     let claims = match decode::<Claims>(
         token,
-        &DecodingKey::from_ed_der(key),
+        &DecodingKey::from_ed_pem(pubkey.as_bytes()).unwrap(),
         &Validation::new(Algorithm::EdDSA),
     ) {
         Ok(c) => c.claims,

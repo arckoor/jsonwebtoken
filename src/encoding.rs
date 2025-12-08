@@ -19,12 +19,8 @@ use crate::serialization::{b64_encode, b64_encode_part};
 #[derive(Clone)]
 
 pub struct EncodingKey {
-    #[cfg(not(feature = "custom-provider"))]
-    pub(crate) family: AlgorithmFamily,
-    #[cfg(feature = "custom-provider")]
-    #[cfg_attr(feature = "custom-provider", allow(missing_docs))]
-    pub family: AlgorithmFamily,
-    pub(crate) content: Vec<u8>,
+    family: AlgorithmFamily,
+    content: Vec<u8>,
 }
 
 impl EncodingKey {
@@ -112,33 +108,13 @@ impl EncodingKey {
         EncodingKey { family: AlgorithmFamily::Ed, content: der.to_vec() }
     }
 
-    #[cfg(not(feature = "custom-provider"))]
-    pub(crate) fn inner(&self) -> &[u8] {
-        self.inner_impl()
-    }
-
     /// Get the value of the key.
-    #[cfg(feature = "custom-provider")]
     pub fn inner(&self) -> &[u8] {
-        self.inner_impl()
-    }
-
-    fn inner_impl(&self) -> &[u8] {
         &self.content
     }
 
-    #[cfg(not(feature = "custom-provider"))]
-    pub(crate) fn try_get_hmac_secret(&self) -> Result<&[u8]> {
-        self.try_get_hmac_secret_impl()
-    }
-
     /// Try to get the HMAC secret from a key.
-    #[cfg(feature = "custom-provider")]
     pub fn try_get_hmac_secret(&self) -> Result<&[u8]> {
-        self.try_get_hmac_secret_impl()
-    }
-
-    fn try_get_hmac_secret_impl(&self) -> Result<&[u8]> {
         if self.family == AlgorithmFamily::Hmac {
             Ok(self.inner())
         } else {

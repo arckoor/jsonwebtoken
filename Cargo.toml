@@ -53,6 +53,8 @@ wasm-bindgen-test = "0.3.1"
 ed25519-dalek = { version = "2.1.1", features = ["pkcs8", "rand_core"] }
 rand = { version = "0.8.5", features = ["std"], default-features = false }
 rand_core = "0.6.4"
+# for the custom provider example
+botan = { version = "0.12.0", features = ["vendored"] }
 [target.'cfg(not(all(target_arch = "wasm32", not(any(target_os = "emscripten", target_os = "wasi")))))'.dev-dependencies]
 # For the custom time example
 time = "0.3"
@@ -68,7 +70,6 @@ default = ["use_pem"]
 use_pem = ["pem", "simple_asn1"]
 rust_crypto = ["ed25519-dalek", "hmac", "p256", "p384", "rand", "rsa", "sha2"]
 aws_lc_rs = ["aws-lc-rs"]
-custom-provider = []
 
 [[bench]]
 name = "jwt"

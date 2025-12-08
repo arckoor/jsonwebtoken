@@ -39,7 +39,7 @@ pub fn encode<T: Serialize>(
     claims: Option<&T>,
     key: &EncodingKey,
 ) -> Result<Jws<T>> {
-    if key.family != header.alg.family() {
+    if key.family() != header.alg.family() {
         return Err(new_error(ErrorKind::InvalidAlgorithm));
     }
     let encoded_header = b64_encode_part(header)?;

@@ -5,18 +5,12 @@
 
 #![deny(missing_docs)]
 
-pub use algorithms::Algorithm;
+pub use algorithms::{Algorithm, AlgorithmFamily};
 pub use decoding::{DecodingKey, TokenData, decode, decode_header};
 pub use encoding::{EncodingKey, encode};
 pub use header::Header;
+pub use signature::{Error, Signer, Verifier};
 pub use validation::{Validation, get_current_timestamp};
-
-/// Things needed to implement a custom crypto provider.
-#[cfg(feature = "custom-provider")]
-pub mod custom_provider {
-    pub use crate::algorithms::AlgorithmFamily;
-    pub use signature::{Error, Signer, Verifier};
-}
 
 /// Dangerous decoding functions that should be audited and used with extreme care.
 pub mod dangerous {
