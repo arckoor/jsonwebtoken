@@ -1,9 +1,9 @@
 use jsonwebtoken::{
-    Algorithm, AlgorithmFamily, DecodingKey, EncodingKey, Error as SigError, Header, Signer,
-    Validation, Verifier,
+    Algorithm, AlgorithmFamily, DecodingKey, EncodingKey, Header, Validation,
     crypto::{CryptoProvider, JwkUtils, JwtSigner, JwtVerifier},
     decode, encode,
     errors::{Error, ErrorKind},
+    signature::{Error as SigError, Signer, Verifier},
 };
 use serde::{Deserialize, Serialize};
 
