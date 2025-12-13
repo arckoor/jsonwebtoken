@@ -44,9 +44,17 @@ macro_rules! expect_two {
 }
 
 #[derive(Clone)]
+/// Different kinds of decoding keys.
 pub enum DecodingKeyKind {
+    /// A raw public key.
     SecretOrDer(Vec<u8>),
-    RsaModulusExponent { n: Vec<u8>, e: Vec<u8> },
+    /// RSA public key components.
+    RsaModulusExponent {
+        /// The modulus of the public key.
+        n: Vec<u8>,
+        /// The exponent of the public key.
+        e: Vec<u8>,
+    },
 }
 
 impl Debug for DecodingKeyKind {
@@ -76,7 +84,7 @@ impl DecodingKey {
         self.family
     }
 
-    /// The kind of decoding key
+    /// The kind of decoding key.
     pub fn kind(&self) -> &DecodingKeyKind {
         &self.kind
     }
