@@ -16,9 +16,6 @@ use crate::errors::Result;
 use crate::jwk::{EllipticCurve, ThumbprintHash};
 use crate::{DecodingKey, EncodingKey};
 
-#[macro_use]
-mod macros;
-
 /// `aws_lc_rs` based CryptoProvider.
 #[cfg(feature = "aws_lc_rs")]
 pub mod aws_lc;
@@ -80,7 +77,7 @@ pub fn verify(
 /// Controls the cryptography used be jsonwebtoken.
 ///
 /// You can either install one of the built-in options:
-/// - [`crypto::aws_lc::DEFAULT_PROVIDER`]: (behind the `aws-lc` crate feature).
+/// - [`crypto::aws_lc::DEFAULT_PROVIDER`]: (behind the `aws_lc_rs` crate feature).
 ///   This provider uses the [aws-lc-rs](https://github.com/aws/aws-lc-rs) crate.
 /// - [`crypto::rust_crypto::DEFAULT_PROVIDER`]: (behind the `rust_crypto` crate feature)
 ///   This provider uses crates from the [Rust Crypto](https://github.com/RustCrypto) project.
@@ -147,7 +144,7 @@ See the documentation of the CryptoProvider type for more information.
     }
 }
 
-/// Holds utility functions needed for JWK processing.
+/// Holds utility functions required for JWK processing.
 /// The `Default` implementation initializes all functions to `unimplemented!()`.
 #[derive(Clone, Debug)]
 pub struct JwkUtils {
