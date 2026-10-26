@@ -1,6 +1,5 @@
 use std::fmt::{Debug, Formatter};
 
-use base64::{Engine, engine::general_purpose::STANDARD};
 use serde::de::DeserializeOwned;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
@@ -11,7 +10,9 @@ use crate::header::Header;
 use crate::jwk::{AlgorithmParameters, Jwk};
 #[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
-use crate::serialization::{DecodedJwtPartClaims, b64_decode};
+use crate::serialization::{
+    DecodedJwtPartClaims, b64_decode, b64_decode_ct, b64_decode_urlsafe_ct,
+};
 use crate::validation::{Validation, validate};
 
 /// The return type of a successful call to [decode](fn.decode.html).
@@ -101,10 +102,15 @@ impl DecodingKey {
 
     /// If you're using HMAC with a base64 encoded secret, use this.
     pub fn from_base64_secret(secret: &str) -> Result<Self> {
-        let out = STANDARD.decode(secret)?;
+        let out = b64_decode_ct(secret)?;
         Ok(DecodingKey { family: AlgorithmFamily::Hmac, kind: DecodingKeyKind::SecretOrDer(out) })
     }
 
+    /// For loading websafe base64 HMAC secrets, ex: ACME EAB credentials.
+    pub fn from_urlsafe_base64_secret(secret: &str) -> Result<Self> {
+        let out = b64_decode_urlsafe_ct(secret)?;
+        Ok(DecodingKey { family: AlgorithmFamily::Hmac, kind: DecodingKeyKind::SecretOrDer(out) })
+    }
     /// If you are loading a public RSA key in a PEM format, use this.
     /// Only exists if the feature `use_pem` is enabled.
     #[cfg(feature = "use_pem")]
@@ -220,7 +226,7 @@ impl DecodingKey {
             }
             AlgorithmParameters::OctetKeyPair(params) => DecodingKey::from_ed_components(&params.x),
             AlgorithmParameters::OctetKey(params) => {
-                let out = b64_decode(&params.value)?;
+                let out = b64_decode_urlsafe_ct(&params.value)?;
                 Ok(DecodingKey {
                     family: AlgorithmFamily::Hmac,
                     kind: DecodingKeyKind::SecretOrDer(out),

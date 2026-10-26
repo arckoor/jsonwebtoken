@@ -81,6 +81,8 @@ pub enum ErrorKind {
     // 3rd party errors
     /// An error happened when decoding some base64 text
     Base64(base64::DecodeError),
+    /// An error happened when decoding some base64 text in constant time
+    Base64Ct(base64ct::Error),
     /// An error happened while serializing/deserializing JSON
     Json(Arc<serde_json::Error>),
     /// Some of the text was invalid UTF-8
@@ -112,6 +114,7 @@ impl StdError for Error {
             ErrorKind::InvalidAlgorithmName => None,
             ErrorKind::InvalidKeyFormat => None,
             ErrorKind::Base64(err) => Some(err),
+            ErrorKind::Base64Ct(err) => Some(err),
             ErrorKind::Json(err) => Some(err.as_ref()),
             ErrorKind::Utf8(err) => Some(err),
             ErrorKind::Provider(_) => None,
@@ -144,6 +147,7 @@ impl fmt::Display for Error {
             ErrorKind::Json(err) => write!(f, "JSON error: {}", err),
             ErrorKind::Utf8(err) => write!(f, "UTF-8 error: {}", err),
             ErrorKind::Base64(err) => write!(f, "Base64 error: {}", err),
+            ErrorKind::Base64Ct(err) => write!(f, "Base64Ct error: {}", err),
             ErrorKind::Provider(msg) => write!(f, "Custom provider error: {}", msg),
         }
     }
@@ -159,8 +163,14 @@ impl PartialEq for ErrorKind {
 impl Eq for ErrorKind {}
 
 impl From<base64::DecodeError> for Error {
-    fn from(err: base64::DecodeError) -> Error {
+    fn from(err: base64::DecodeError) -> Self {
         new_error(ErrorKind::Base64(err))
+    }
+}
+
+impl From<base64ct::Error> for Error {
+    fn from(err: base64ct::Error) -> Self {
+        new_error(ErrorKind::Base64Ct(err))
     }
 }
 

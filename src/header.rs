@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::result;
 
-use base64::{Engine, engine::general_purpose::STANDARD};
+use base64ct::{Base64, Encoding};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -264,7 +264,7 @@ impl Header {
             .x5c
             .as_ref()
             .map(|b64_certs| {
-                b64_certs.iter().map(|x| STANDARD.decode(x)).collect::<result::Result<_, _>>()
+                b64_certs.iter().map(|x| Base64::decode_vec(x)).collect::<result::Result<_, _>>()
             })
             .transpose()?)
     }

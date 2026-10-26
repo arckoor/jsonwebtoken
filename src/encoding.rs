@@ -1,9 +1,5 @@
 use std::fmt::{Debug, Formatter};
 
-use base64::{
-    Engine,
-    engine::general_purpose::{STANDARD, URL_SAFE},
-};
 use serde::ser::Serialize;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
@@ -13,7 +9,7 @@ use crate::errors::{ErrorKind, Result, new_error};
 use crate::header::Header;
 #[cfg(feature = "use_pem")]
 use crate::pem::decoder::PemEncodedKey;
-use crate::serialization::{b64_encode, b64_encode_part};
+use crate::serialization::{b64_decode_ct, b64_decode_urlsafe_ct, b64_encode, b64_encode_part};
 
 /// A key to encode a JWT with. Can be a secret, a PEM-encoded key or a DER-encoded key.
 /// This key can be re-used so make sure you only initialize it once if you can for better performance.
@@ -37,13 +33,13 @@ impl EncodingKey {
 
     /// If you have a base64 HMAC secret, use that.
     pub fn from_base64_secret(secret: &str) -> Result<Self> {
-        let out = STANDARD.decode(secret)?;
+        let out = b64_decode_ct(secret)?;
         Ok(EncodingKey { family: AlgorithmFamily::Hmac, content: out })
     }
 
     /// For loading websafe base64 HMAC secrets, ex: ACME EAB credentials.
     pub fn from_urlsafe_base64_secret(secret: &str) -> Result<Self> {
-        let out = URL_SAFE.decode(secret)?;
+        let out = b64_decode_urlsafe_ct(secret)?;
         Ok(EncodingKey { family: AlgorithmFamily::Hmac, content: out })
     }
 
